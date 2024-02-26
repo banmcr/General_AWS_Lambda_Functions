@@ -22,7 +22,7 @@ def lambda_handler(event, context):
         #startRedisCluster('test-cluster')
         #startStopDocDBCluster(tagName, tagValue, actionValue)
         #startStopEKSNG - GIVE NodeGroup name in the function
-
+        #ecs_start_stop('cluster_arn',actionValue)
     return {
         'statusCode': 200,
         'body': json.dumps('SUCCESS')
@@ -149,3 +149,21 @@ def startStopEKSNG(actionValue):
         print('downscaling the min/max/desired values to 0')
         return eks_client.update_nodegroup_config(clusterName='Test2',nodegroupName='S22IT-UAT-NG-SPOT',scalingConfig={'minSize': 0,'maxSize': 5,'desiredSize': 0})
 
+def ecs_start_stop(cluster_arn, actionValue):
+    #ecsList = []
+    ecsclient = boto3.client('ecs')
+    #ecsResponse = ecsclient.list_clusters()
+    #clusters_arns=ecsResponse["clusterArns"]
+    #for cluster_arn in clusters_arns:
+    cluster_name = cluster_arn.split('/')[-1]
+    print(f"Services in ECS cluster {cluster_name}:")
+    services_response = ecsclient.list_services(cluster=cluster_arn)
+    service_arns = services_response['serviceArns']
+    for service_arn in service_arns:
+        service_name = service_arn.split('/')[-1]
+        if actionValue.lower() == 'stop':
+            print(f"\t- changing {service_name} count to 0")
+            ecsclient.update_service(cluster=cluster_name,service=service_name,desiredCount=0)
+        elif actionValue.lower() == 'start':
+            print(f"\t- changing {service_name} count to 1")
+            ecsclient.update_service(cluster=cluster_name,service=service_name,desiredCount=1)
